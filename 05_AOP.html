@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>AOP</title>
+        <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+        
+    </head>
+    <body class="vscode-body vscode-light">
+        <h1 id="aop">AOP</h1>
+<ul>
+<li><a href="#aop">AOP</a>
+<ul>
+<li><a href="#1-%E4%BB%8B%E7%BB%8D">1. 介绍</a></li>
+<li><a href="#2-%E6%A8%A1%E6%8B%9Faop%E5%AE%9E%E7%8E%B0">2. 模拟AOP实现</a></li>
+<li><a href="#3-%E5%9F%BA%E4%BA%8Exml%E9%85%8D%E7%BD%AE%E7%9A%84aop">3. 基于xml配置的AOP</a></li>
+<li><a href="#4-aop%E9%85%8D%E7%BD%AE%E7%9A%84%E4%B8%A4%E7%A7%8D%E8%AF%AD%E6%B3%95%E5%BD%A2%E5%BC%8F">4. AOP配置的两种语法形式</a></li>
+<li><a href="#5-aop%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86%E7%9A%84%E5%AE%9E%E7%8E%B0">5. AOP动态代理的实现</a></li>
+<li><a href="#6-%E5%9F%BA%E4%BA%8E%E6%B3%A8%E8%A7%A3%E7%9A%84aop%E4%BD%BF%E7%94%A8">6. 基于注解的AOP使用</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="1-介绍">1. 介绍</h2>
+<p>AOP，Aspect Oriented Programming，面向切面编程。OOP是纵向对一个事物的抽象，对象包括静态的属性信息，动态的方法信息等。而AOP是横向对不同事物的抽象，属性与属性、方法与方法，对象与对象都可以组成一个切面，这种设计编程的思维叫做面向切面编程。</p>
+<p>AOP思想的实现方案是<strong>动态代理技术</strong>。在运行期间，对目标对象的方法进行增强，代理对象同名方法内可以执行原有逻辑的同时，嵌入执行其他增强逻辑或其他对象的方法。</p>
+<p><img src="file:///d:\notes\spring basic\imgs\2023-04-10-18-46-16-image.png" alt="1"></p>
+<p><strong>IoC讲的是如何创建Bean，AOP讲的是如何增强Bean。</strong></p>
+<h2 id="2-模拟aop实现">2. 模拟AOP实现</h2>
+<p>首先，将UserService设为Bean，其次，增强类（Advice）为MyAdvice，它的内容如下，</p>
+<pre><code class="language-java"><span class="hljs-meta">@Component(&quot;myAdvice&quot;)</span>
+<span class="hljs-comment">// 增强类，内部提供增强方法</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdvice</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">beforeAdvice</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;前置的增强...&quot;</span>);
+    }
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">afterAdvice</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;后置的增强...&quot;</span>);
+    }
+}
+</code></pre>
+<p>最后，创建一个BeanPostProcessor，实现Bean功能的增强，</p>
+<pre><code class="language-java"><span class="hljs-meta">@Component</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MockAopBeanPostProcessor</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">BeanPostProcessor</span>, ApplicationContextAware {
+
+    <span class="hljs-keyword">private</span> ApplicationContext applicationContext;
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> Object <span class="hljs-title function_">postProcessAfterInitialization</span><span class="hljs-params">(Object bean, String beanName)</span> <span class="hljs-keyword">throws</span> BeansException {
+        <span class="hljs-comment">// 目的：对UserServiceImpl中的show1和show2方法进行增强，增强方法在MyAdvice中</span>
+        <span class="hljs-comment">// 问题1：筛选增强对象，筛选service.impl包下的所有类的所有方法都可以增强</span>
+        <span class="hljs-comment">// 问题2：如何获取MyAdvice 解决方案：从Spring容器中获得MyAdvice</span>
+        <span class="hljs-keyword">if</span> (bean.getClass().getPackage().getName().equals(<span class="hljs-string">&quot;com.example.service.impl&quot;</span>)) {
+            <span class="hljs-comment">// 生成当前Bean的Proxy对象</span>
+            <span class="hljs-keyword">return</span> Proxy.newProxyInstance(
+                    bean.getClass().getClassLoader(),
+                    bean.getClass().getInterfaces(),
+                    (proxy, method, args) -&gt; {
+                        <span class="hljs-comment">// 执行增强对象的before方法</span>
+                        <span class="hljs-type">MyAdvice</span> <span class="hljs-variable">myAdvice</span> <span class="hljs-operator">=</span> applicationContext.getBean(MyAdvice.class);
+                        myAdvice.beforeAdvice();
+                        <span class="hljs-comment">// 执行目标对象目标方法</span>
+                        <span class="hljs-type">Object</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> method.invoke(bean, args);
+                        <span class="hljs-comment">// after方法</span>
+                        myAdvice.afterAdvice();
+                        <span class="hljs-keyword">return</span> result;
+                    }
+            );
+        }
+        <span class="hljs-keyword">return</span> BeanPostProcessor.<span class="hljs-built_in">super</span>.postProcessAfterInitialization(bean, beanName);
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setApplicationContext</span><span class="hljs-params">(ApplicationContext applicationContext)</span> <span class="hljs-keyword">throws</span> BeansException {
+        <span class="hljs-built_in">this</span>.applicationContext = applicationContext;
+    }
+}
+</code></pre>
+<p>其中，ApplicationContextAware是为了自动注入applicationContext，以获取增强类MyAdvice。</p>
+<p>此时，从Spring容器中获取的UserService已经被增强了。</p>
+<p>AOP中有许多术语需要了解，</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>单词</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目标对象</td>
+<td>Target</td>
+<td>被增强方法所在的对象</td>
+</tr>
+<tr>
+<td>代理对象</td>
+<td>Proxy</td>
+<td>对目标对象进行增强的对象，客户端实际调用的对象</td>
+</tr>
+<tr>
+<td>连接点</td>
+<td>Jointpoint</td>
+<td>目标对象中可以被增强的方法</td>
+</tr>
+<tr>
+<td>切入点</td>
+<td>Pointcut</td>
+<td>目标对象中实际被增强的方法</td>
+</tr>
+<tr>
+<td>通知\增强</td>
+<td>Advice</td>
+<td>增强部分的代码逻辑</td>
+</tr>
+<tr>
+<td>切面</td>
+<td>Aspect</td>
+<td>增强和切入点的组合</td>
+</tr>
+<tr>
+<td>织入</td>
+<td>Weaving</td>
+<td>将通知和切入点动态组合的过程</td>
+</tr>
+</tbody>
+</table>
+<p><img src="file:///d:\notes\spring basic\imgs\2023-04-11-10-40-42-image.png" alt="4"></p>
+<h2 id="3-基于xml配置的aop">3. 基于xml配置的AOP</h2>
+<p>模拟AOP实现中，存在一些问题，</p>
+<ul>
+<li>
+<p>被增强的包名在代码中写死了</p>
+</li>
+<li>
+<p>通知对象的方法在代码中写死了</p>
+</li>
+</ul>
+<p>通过Spring xml配置的方式实现AOP，解决上述问题，</p>
+<ul>
+<li>
+<p>配置哪些包、哪些类、哪些方法需要被增强</p>
+</li>
+<li>
+<p>配置目标方法要被哪些通知方法所增强，在目标方法执行之前还是之后进行增强</p>
+</li>
+</ul>
+<p>xml配置AOP的步骤，</p>
+<ul>
+<li>导入AOP相关坐标</li>
+</ul>
+<pre><code class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.aspectj<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>aspectjweaver<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.9.6<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>runtime<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<ul>
+<li>准备目标类、通知类，并配置给Spring管理</li>
+</ul>
+<pre><code class="language-xml"><span class="hljs-comment">&lt;!--目标类--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;userService&quot;</span> <span class="hljs-attr">class</span>=<span class="hljs-string">&quot;com.example.service.impl.UserServiceImpl&quot;</span>/&gt;</span>
+<span class="hljs-comment">&lt;!--通知类--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;myAdvice&quot;</span> <span class="hljs-attr">class</span>=<span class="hljs-string">&quot;com.example.advice.MyAdvice&quot;</span>/&gt;</span>
+</code></pre>
+<ul>
+<li>
+<p>配置<strong>切点表达式</strong>（哪些方法被增强）</p>
+</li>
+<li>
+<p>配置<strong>织入</strong>（切点被哪些通知方法增强，是前置增强还是后置增强）</p>
+</li>
+</ul>
+<pre><code class="language-xml"><span class="hljs-comment">&lt;!--aop配置--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">aop:config</span>&gt;</span>
+  <span class="hljs-comment">&lt;!--配置切点表达式，目的是要指定哪些方法被增强--&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">aop:pointcut</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;myPointcut&quot;</span> <span class="hljs-attr">expression</span>=<span class="hljs-string">&quot;execution(void com.example.service.impl.UserServiceImpl.show1())&quot;</span>/&gt;</span>
+  <span class="hljs-comment">&lt;!--配置织入，目的是要执行哪些切点与哪些通知进行结合--&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">aop:aspect</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">&quot;myAdvice&quot;</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">aop:before</span> <span class="hljs-attr">method</span>=<span class="hljs-string">&quot;beforeAdvice&quot;</span> <span class="hljs-attr">pointcut-ref</span>=<span class="hljs-string">&quot;myPointcut&quot;</span>/&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">aop:aspect</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">aop:config</span>&gt;</span>
+</code></pre>
+<p>切点表达式是配置要对哪些连接点进行通知增强，语法如下：</p>
+<pre><code class="language-context">execution([访问修饰符]返回值类型 包名.类名.方法名(参数名))
+</code></pre>
+<p>其中，</p>
+<ul>
+<li>
+<p>访问修饰符可以省略不写</p>
+</li>
+<li>
+<p>返回值类型、某一级包名、类名、方法名可以用 *表示任意</p>
+</li>
+<li>
+<p>包名与类名之间使用单点.表示该包下的类，使用双点..表示该包及其子包下的类</p>
+</li>
+<li>
+<p>参数列表可以使用两个点..表示任意参数</p>
+</li>
+</ul>
+<p>aspectj的通知有五种类型，</p>
+<table>
+<thead>
+<tr>
+<th>通知名称</th>
+<th>配置方式</th>
+<th>执行时机</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前置通知</td>
+<td>&lt;aop:before&gt;</td>
+<td>目标方法执行之前</td>
+</tr>
+<tr>
+<td>后置通知</td>
+<td>&lt;aop:after-returning&gt;</td>
+<td>目标方法执行之后，目标方法发生异常时，不再执行</td>
+</tr>
+<tr>
+<td>环绕通知</td>
+<td>&lt;aop:around&gt;</td>
+<td>目标方法执行前后执行，目标方法发生异常时，环绕后方法不再执行</td>
+</tr>
+<tr>
+<td>异常通知</td>
+<td>&lt;aop:after-throwing&gt;</td>
+<td>目标方法抛出异常时执行</td>
+</tr>
+<tr>
+<td>最终通知</td>
+<td>&lt;aop:after&gt;</td>
+<td>不管目标方法是否有异常，最终都会执行</td>
+</tr>
+</tbody>
+</table>
+<p>其中，环绕通知方法如下，需要加入参数ProceedingJointpoint，表明目标方法执行时机</p>
+<pre><code class="language-java"><span class="hljs-keyword">public</span> Object <span class="hljs-title function_">aroundAdvice</span><span class="hljs-params">(ProceedingJoinPoint proceedingJoinPoint)</span> <span class="hljs-keyword">throws</span> Throwable {
+    System.out.println(<span class="hljs-string">&quot;环绕前的通知...&quot;</span>);
+    <span class="hljs-comment">// 执行目标方法</span>
+    <span class="hljs-type">Object</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> proceedingJoinPoint.proceed();
+    System.out.println(<span class="hljs-string">&quot;环绕后的通知...&quot;</span>);
+    <span class="hljs-keyword">return</span> result;
+}
+</code></pre>
+<p>通知方法在被调用时，Spring可以传递一些必要的参数，</p>
+<table>
+<thead>
+<tr>
+<th>参数类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jointpoint</td>
+<td>连接点对象，任何通知都可以使用，可以获得当前目标对象、目标方法参数等信息</td>
+</tr>
+<tr>
+<td>ProceedingJointpoint</td>
+<td>Jointpoint子类对象，主要是在环绕通知中执行proceed()，即执行目标方法</td>
+</tr>
+<tr>
+<td>Throwable</td>
+<td>异常对象，使用在异常通知中，需要在配置文件中指出异常对象名称</td>
+</tr>
+</tbody>
+</table>
+<p>Throwable在使用时，需要在配置中声明异常的参数名，配置有，</p>
+<pre><code class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">aop:after-throwing</span> <span class="hljs-attr">method</span>=<span class="hljs-string">&quot;afterThrowing&quot;</span> <span class="hljs-attr">pointcut-ref</span>=<span class="hljs-string">&quot;myPointcut&quot;</span> <span class="hljs-attr">throwing</span>=<span class="hljs-string">&quot;th&quot;</span>/&gt;</span>
+</code></pre>
+<h2 id="4-aop配置的两种语法形式">4. AOP配置的两种语法形式</h2>
+<p>AOP的xml配置有两种方式，</p>
+<ul>
+<li>
+<p>使用&lt;advisor&gt;配置切面，通知类需要实现Spring提供的Advice接口，Advice是一个空接口，它还有很多子接口</p>
+</li>
+<li>
+<p>使用&lt;aspect&gt;配置切面（前文所述的方法）</p>
+</li>
+</ul>
+<p>通知类，</p>
+<pre><code class="language-java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdvice2</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">MethodBeforeAdvice</span>, AfterReturningAdvice {
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">before</span><span class="hljs-params">(Method method, Object[] args, Object target)</span> <span class="hljs-keyword">throws</span> Throwable {
+        System.out.println(<span class="hljs-string">&quot;前置通知...&quot;</span>);
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">afterReturning</span><span class="hljs-params">(Object returnValue, Method method, Object[] args, Object target)</span> <span class="hljs-keyword">throws</span> Throwable {
+        System.out.println(<span class="hljs-string">&quot;后置通知...&quot;</span>);
+    }
+}
+</code></pre>
+<p>xml配置，</p>
+<pre><code class="language-xml"><span class="hljs-comment">&lt;!--目标类--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;userService&quot;</span> <span class="hljs-attr">class</span>=<span class="hljs-string">&quot;com.example.service.impl.UserServiceImpl&quot;</span>/&gt;</span>
+<span class="hljs-comment">&lt;!--通知类--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">bean</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;myAdvice2&quot;</span> <span class="hljs-attr">class</span>=<span class="hljs-string">&quot;com.example.advice.MyAdvice2&quot;</span>/&gt;</span>
+
+<span class="hljs-comment">&lt;!--Advisor配置实现aop--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">aop:config</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">aop:pointcut</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;myPointcut&quot;</span> <span class="hljs-attr">expression</span>=<span class="hljs-string">&quot;execution(* com.example.service.impl..*.*(..))&quot;</span>/&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">aop:advisor</span> <span class="hljs-attr">advice-ref</span>=<span class="hljs-string">&quot;myAdvice2&quot;</span> <span class="hljs-attr">pointcut-ref</span>=<span class="hljs-string">&quot;myPointcut&quot;</span>/&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">aop:config</span>&gt;</span>
+</code></pre>
+<p>这种配置方法，不需要在xml配置文件中，显示声明通知的类别，而是在通知类种实现的接口来指明通知的类别。</p>
+<p>AOP配置的两种方式有以下区别，</p>
+<ul>
+<li>
+<p>语法形式不同</p>
+<ul>
+<li>
+<p>advisor通过实现接口确认通知的类型</p>
+</li>
+<li>
+<p>aspect通过配置确认通知的类型，更加灵活</p>
+</li>
+</ul>
+</li>
+<li>
+<p>可配置的切面数量不同</p>
+<ul>
+<li>
+<p>一个advisor只能配置一个固定通知和一个切点表达式</p>
+</li>
+<li>
+<p>一个aspect可以配置多个通知和多个切尔点表达式的任意组合</p>
+</li>
+</ul>
+</li>
+<li>
+<p>使用场景不同</p>
+<ul>
+<li>
+<p>允许随意搭配的情况下可以使用aspect进行配置</p>
+</li>
+<li>
+<p>如果同通知类型单一、切面单一的情况下可以使用advisor配置</p>
+</li>
+<li>
+<p>在通知类型已经固定，不用指定通知类型时，可以使用advisor配置，例如Spring事务控制的配置</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="5-aop动态代理的实现">5. AOP动态代理的实现</h2>
+<p>有两种动态代理的实现，</p>
+<table>
+<thead>
+<tr>
+<th>代理技术</th>
+<th>使用条件</th>
+<th>配置方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JDK动态代理技术</td>
+<td>目标类有接口，是基于接口动态生成实现类的代理对象</td>
+<td>目标类有接口，默认方式</td>
+</tr>
+<tr>
+<td>Cglib动态代理技术</td>
+<td>目标类无接口且不能用final修饰，是基于被代理对象动态生成子对象为代理对象</td>
+<td>目标类无接口时，默认使用该方式；目标类有接口时，手动配置&lt;aop:config proxy-target-class=&quot;true&quot;&gt;强制使用Cglib方式</td>
+</tr>
+</tbody>
+</table>
+<p><img src="file:///d:\notes\spring basic\imgs\2023-04-11-21-25-19-image.png" alt="2"></p>
+<h2 id="6-基于注解的aop使用">6. 基于注解的AOP使用</h2>
+<p>在xml配置中，配置了三个方面：</p>
+<ul>
+<li>
+<p>目标类</p>
+</li>
+<li>
+<p>通知类</p>
+</li>
+<li>
+<p>织入</p>
+</li>
+</ul>
+<p>使用注解的步骤，</p>
+<ul>
+<li>
+<p>启用aop配置，在配置类中添加注解@EnableAspectJAutoProxy</p>
+</li>
+<li>
+<p>将目标类和通知类交由Spring容器管理，注解@Component</p>
+</li>
+<li>
+<p>通知类的配置如下，类上添加注解@Aspect，通知方法上添加注解@Before（前置通知）</p>
+</li>
+</ul>
+<pre><code class="language-java"><span class="hljs-meta">@Component(&quot;myAdvice&quot;)</span>
+<span class="hljs-meta">@Aspect</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdvice</span> {
+    <span class="hljs-meta">@Before(&quot;execution(* com.example.service.impl.*.*(..))&quot;)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">beforeAdvice</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;前置的增强...&quot;</span>);
+    }
+}
+</code></pre>
+<p><img src="file:///d:\notes\spring basic\imgs\2023-04-11-22-49-04-image.png" alt="3"></p>
+<p>在注解中，如何抽取切面表达式？如下，</p>
+<pre><code class="language-java"><span class="hljs-meta">@Pointcut(&quot;execution(* com.example.service.impl.*.*(..))&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">myPointcut</span><span class="hljs-params">()</span> {}
+
+
+<span class="hljs-meta">@Before(&quot;MyAdvice.myPointcut()&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">beforeAdvice</span><span class="hljs-params">()</span> {
+   System.out.println(<span class="hljs-string">&quot;前置的增强...&quot;</span>);
+}
+</code></pre>
+
+        
+        
+    </body>
+    </html>
