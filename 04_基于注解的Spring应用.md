@@ -2,37 +2,46 @@
 
 Spring除了使用xml进行配置以外，还可以使用注解方式进行配置，注解方式慢慢成为xml配置的替代方案。
 
-## 1. 使用@Component代替<bean>
+- [基于注解的Spring应用](#基于注解的spring应用)
+  - [1. 使用@Component代替\<bean\>](#1-使用component代替bean)
+  - [2. 依赖注入开发](#2-依赖注入开发)
+  - [3. 非自定义Bean的注入](#3-非自定义bean的注入)
+  - [4. Bean配置类的开发](#4-bean配置类的开发)
+  - [5. 其他注解](#5-其他注解)
+  - [6. 注解解析原理](#6-注解解析原理)
+  - [7. 整合第三方框架](#7-整合第三方框架)
+
+## 1. 使用@Component代替\<bean>
 
 基于注解的，需要在配置文件添加context:component-scan标签。
 
 bean标签的属性，对应了以下几个标签，
 
-| xml配置                    | 注解             | 描述                                                    |
-| ------------------------ | -------------- | ----------------------------------------------------- |
-| <bean scope="">          | @Scope         | 在类上或使用了@Bean注解的方法上，标注Bean的作用范围，取值为singleton或prototype |
-| <bean lazy-init="">      | @Lazy          | 在类上或使用了@Bean注解的方法上，标注Bean是否延迟加载，取值为true或false         |
-| <bean init-method="">    | @PostConstruct | 在方法上使用，标注Bean的实例化后执行的方法                               |
-| <bean destroy-method=""> | @PreDestroy    | 在方法上使用，标注Bean的销毁前执行方法                                 |
+| xml配置                   | 注解           | 描述                                                                            |
+| ------------------------- | -------------- | ------------------------------------------------------------------------------- |
+| \<bean scope="">          | @Scope         | 在类上或使用了@Bean注解的方法上，标注Bean的作用范围，取值为singleton或prototype |
+| \<bean lazy-init="">      | @Lazy          | 在类上或使用了@Bean注解的方法上，标注Bean是否延迟加载，取值为true或false        |
+| \<bean init-method="">    | @PostConstruct | 在方法上使用，标注Bean的实例化后执行的方法                                      |
+| \<bean destroy-method=""> | @PreDestroy    | 在方法上使用，标注Bean的销毁前执行方法                                          |
 
 由于JavaEE开发是分层的，为了每层Bean标识的注解语义化更加明确，@Component衍生出如下三个注解，
 
-| @Component衍生注解 | 描述             |
-| -------------- | -------------- |
-| @Repository    | 在Dao层类上使用      |
-| @Service       | 在Serevice层类上使用 |
-| @Controller    | 在Web层上使用       |
+| @Component衍生注解 | 描述                 |
+| ------------------ | -------------------- |
+| @Repository        | 在Dao层类上使用      |
+| @Service           | 在Serevice层类上使用 |
+| @Controller        | 在Web层上使用        |
 
 ## 2. 依赖注入开发
 
 Spring提供了如下的注解，用于在Bean内部进行属性注入：
 
-| 属性注入注解     | 描述                             |
-| ---------- | ------------------------------ |
-| @Value     | 使用在字段或方法上，用于注入普通数据             |
-| @Autowired | 使用在字段或方法上，用于根据类型（byType）注入引用数据 |
-| @Qualifier | 使用在字段或方法上，结合@Autowired，根据名称注入  |
-| @Resource  | 使用在字段或方法上，根据类型或名称注入            |
+| 属性注入注解 | 描述                                                   |
+| ------------ | ------------------------------------------------------ |
+| @Value       | 使用在字段或方法上，用于注入普通数据                   |
+| @Autowired   | 使用在字段或方法上，用于根据类型（byType）注入引用数据 |
+| @Qualifier   | 使用在字段或方法上，结合@Autowired，根据名称注入       |
+| @Resource    | 使用在字段或方法上，根据类型或名称注入                 |
 
 - 这些注解可以标识在字段上，也可以标识在set方法上
 
@@ -127,7 +136,7 @@ public void test03() {
 
 ## 6. 注解解析原理
 
-![](imgs\Spring注解解析原理.png)
+![1](imgs\Spring注解解析原理.png)
 
 ## 7. 整合第三方框架
 

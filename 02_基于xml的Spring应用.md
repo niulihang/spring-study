@@ -1,4 +1,18 @@
-# 02. 基于xml的Spring应用
+# 基于xml的Spring应用
+
+- [基于xml的Spring应用](#基于xml的spring应用)
+  - [1. bean标签的属性](#1-bean标签的属性)
+  - [2. Bean的实例化配置](#2-bean的实例化配置)
+  - [3. Bean的依赖注入](#3-bean的依赖注入)
+  - [4. Spring的常见默认标签](#4-spring的常见默认标签)
+  - [5. Spring配置非自定义Bean](#5-spring配置非自定义bean)
+  - [6. Bean实例化的基本流程](#6-bean实例化的基本流程)
+  - [7. Spring的后处理器](#7-spring的后处理器)
+    - [7.1 BeanFactoryPostProcessor](#71-beanfactorypostprocessor)
+    - [7.2 BeanPostProcessor](#72-beanpostprocessor)
+  - [8. Spring Bean的生命周期](#8-spring-bean的生命周期)
+    - [8.1 Bean实例的属性注入](#81-bean实例的属性注入)
+    - [8.2 常用的Aware接口](#82-常用的aware接口)
 
 ## 1. bean标签的属性
 
@@ -37,7 +51,7 @@ Spring 的实例化主要有以下两种方式（指的时BeanFactory中实例�
 - 工厂方式实例化，底层通过调用自定义的工厂方法对Bean进行实例化
 
 > 有参构造，可通过constructor-arg 标签定义，并传输值
-> 
+>  
 > 注意：constructor-arg不仅仅可以用于向有参构造方法传输值
 
 工厂方式实例化Bean，分为如下三种：
@@ -170,20 +184,20 @@ System.out.println(currentTime);
 
 1. 定义dateTimeFormatter的Bean，使用静态工厂的方式
 
-```xml
-<bean name="dateTimeFormatter" class="java.time.format.DateTimeFormatter" factory-method="ofPattern">
-  <constructor-arg name="pattern" value="yyyy-MM-dd HH:mm:ss"/>
-</bean>
-```
+    ```xml
+    <bean name="dateTimeFormatter" class="java.time.format.DateTimeFormatter" factory-method="ofPattern">
+      <constructor-arg name="pattern" value="yyyy-MM-dd HH:mm:ss"/>
+    </bean>
+    ```
 
 2. 定义结果currentDateTime，它需要有LocalDateTime的静态方法生成，也是以静态工厂的方式
 
-```xml
-<bean name="currentDateTime" class="java.time.LocalDateTime" factory-method="parse">
-  <constructor-arg name="text" value="2023-08-27 07:20:00"/>
-  <constructor-arg name="formatter" ref="dateTimeFormatter"/>
-</bean>
-```
+    ```xml
+    <bean name="currentDateTime" class="java.time.LocalDateTime" factory-method="parse">
+      <constructor-arg name="text" value="2023-08-27 07:20:00"/>
+      <constructor-arg name="formatter" ref="dateTimeFormatter"/>
+    </bean>
+    ```
 
 例子3：配置MyBatis的SqlSessionFactory交由Spring管理
 
@@ -199,35 +213,35 @@ SqlSessionFactory sqlSessionFactory = builder.build(in);
 
 1. 定义InputStream的Bean，以静态工厂的方式
 
-```xml
-<bean id="in" class="org.apache.ibatis.io.Resources" factory-method="getResourceAsStream">
-  <constructor-arg name="resource" value="mybatis-config.xml"/>
-</bean>
-```
+    ```xml
+    <bean id="in" class="org.apache.ibatis.io.Resources" factory-method="getResourceAsStream">
+      <constructor-arg name="resource" value="mybatis-config.xml"/>
+    </bean>
+    ```
 
 2. 定义SqlSessionFactoryBuilder的Bean，常规Bean，无参构造的方式
 
-```xml
-<bean id="builder" class="org.apache.ibatis.session.SqlSessionFactoryBuilder"></bean>
-```
+    ```xml
+    <bean id="builder" class="org.apache.ibatis.session.SqlSessionFactoryBuilder"></bean>
+    ```
 
 3. 定义结果SqlSessionFactory的Bean，以实例工厂的方式
 
-```xml
-<bean id="sqlSessionFactory" factory-bean="builder" factory-method="build">
-  <constructor-arg name="inputStream" ref="in"/>
-</bean>
-```
+    ```xml
+    <bean id="sqlSessionFactory" factory-bean="builder" factory-method="build">
+      <constructor-arg name="inputStream" ref="in"/>
+    </bean>
+    ```
 
 ## 6. Bean实例化的基本流程
 
-- Spring容器在进行初始化时，会将xml配置的<bean>的信息封装成一个BeanDefinition对象，所有BeanDefinition存储到一个名为beanDefinitionMap的Map集合中；
+- Spring容器在进行初始化时，会将xml配置的\<bean>的信息封装成一个BeanDefinition对象，所有BeanDefinition存储到一个名为beanDefinitionMap的Map集合中；
 
 - Spring框架对该Map进行遍历，使用反射创建Bean实例对象；
 
 - 创建好的Bean对象存储在一个名为singletonObjects的Map集合中，当调用getBean方法时，从该Map集合中取出Bean实例对象返回。
 
-![Bean实例化基本流程](D:\notes\spring%20basic\imgs\Bean实例化基本流程.png)
+![Bean实例化基本流程](imgs\Bean实例化基本流程.png)
 
 ## 7. Spring的后处理器
 
@@ -236,8 +250,6 @@ Spring的后处理器是Spring对外开发的重要扩展点，允许我们介�
 - BeanFactoryPostProcessor：Bean工厂后处理器，在beanDefinitionMap填充完毕，Bean实例化之前执行；
 
 - BeanPostProcessor：Bean后处理器，一版在Bean实例化之后，填充到单例池singletonObjects之前执行
-
-### 
 
 ### 7.1 BeanFactoryPostProcessor
 
@@ -284,7 +296,7 @@ public class MyBeanDefinitionRegistryPostProcessor implements BeanDefinitionRegi
 
 执行过程可如下图所示
 
-![BeanFactoryPostProcessor在SpringBean实例化过程中的体现](D:\notes\spring%20basic\imgs\BeanFactoryPostProcessor在SpringBean的实例化过程中的体现.png)
+![BeanFactoryPostProcessor在SpringBean实例化过程中的体现](imgs\BeanFactoryPostProcessor在SpringBean的实例化过程中的体现.png)
 
 案例：
 
@@ -293,8 +305,6 @@ public class MyBeanDefinitionRegistryPostProcessor implements BeanDefinitionRegi
 - 使用包扫描工具BeanClassScanUtils完成指定包的类扫描；
 
 - 自定义BeanFactoryPostProcessor完成注解@MyComponent的解析，解析后最终被Spring管理
-
-### 
 
 ### 7.2 BeanPostProcessor
 
@@ -310,7 +320,7 @@ Bean被实例化后，到最终缓存到名为singletonObjects单例池之前，
 
 - init-method可以自定义init方法，设置在配置的init-method属性中，或者，Bean实现接口InitializingBean，需要注意的是，先执行InitializingBean的方法，再执行init-method
 
-![BeanPostProcessor在SpringBean实例化过程中的体现](D:\notes\spring%20basic\imgs\BeanPostProcessor在SpringBean的实例化过程中的体现.png)
+![BeanPostProcessor在SpringBean实例化过程中的体现](imgs\BeanPostProcessor在SpringBean的实例化过程中的体现.png)
 
 案例：对Bean方法进行执行时间日志增强
 
@@ -347,15 +357,15 @@ Spring Bean的生命周期是从Bean实例化之后，即，通过反射创建�
 - 注入双向对象引用属性时，涉及到循环引用问题。
 
 > SpringBean的循环引用问题。Spring提供了**三级缓存**存储**完整Bean实例**和**半成品Bean实例**，用于解决循环引用的问题。
-> 
+>  
 > Spring的三级缓存分别是singletonObjects、earlySingletonObjects和singletonFactories。
-> 
+>  
 > 1. singletonObjects：这是Spring缓存单例Bean对象的最终缓存，也就是我们通常所说的单例池。当Bean对象创建完成后，Spring会将其放入singletonObjects缓存中，以便后续使用。
-> 
+>  
 > 2. earlySingletonObjects：这是Spring缓存Bean对象的第二级缓存，也称为早期单例对象缓存。当Spring创建Bean对象时，会先创建一个早期单例对象，并将其放入earlySingletonObjects缓存中。在创建完所有Bean对象后，Spring会将earlySingletonObjects缓存中的所有早期单例对象转化为单例对象，并放入singletonObjects缓存中。
-> 
+>  
 > 3. singletonFactories：这是Spring缓存Bean对象的第一级缓存，也称为单例工厂缓存。当Spring创建BeanDefinition对象时，会将其转化为一个单例工厂对象，并将其放入singletonFactories缓存中。当获取Bean对象时，Spring会先从singletonObjects缓存中查找，如果未找到，则从earlySingletonObjects缓存中查找，如果仍未找到，则从singletonFactories缓存中查找。如果在singletonFactories缓存中找到了对应的单例工厂对象，则会使用该工厂对象创建Bean对象并放入singletonObjects缓存中。
-> 
+>  
 > 通过使用三级缓存，Spring可以提高Bean对象的创建效率，避免重复创建对象和循环依赖等问题。同时，三级缓存也提供了一些扩展机制，如可以使用BeanPostProcessor接口在Bean对象创建前后进行一些处理。需要注意的是，如果Bean对象的作用域不是单例，则不会使用三级缓存，而是每次创建新的Bean对象。
 
 ```java
@@ -389,12 +399,12 @@ public class DefaultSingletonBeanRegistry ... {
 
 Aware接口是框架辅助属性注入的一种思想，其他框架中也可以看到类似的接口。框架具备高度封装性，我们接触到的一般是业务代码，一个底层功能API不能轻易获取到，但是，这并不意味着永远用不到这些对象，如果用到了，就可以使用框架提供的类似Aware接口，让框架注入该对象。
 
-| Aware接口                 | 回调方法                                                         | 作用                                     |
-| ----------------------- | ------------------------------------------------------------ |:-------------------------------------- |
+| Aware接口               | 回调方法                                                     | 作用                                                  |
+| ----------------------- | ------------------------------------------------------------ | :---------------------------------------------------- |
 | ServletContextAware     | setServletContext(Servletcontext context)                    | Spring框架回调方法注入ServletContext对象，web环境生效 |
-| BeanFactoryAware        | setBeanFactory(BeanFactory factory)                          | Spring框架回调方法注入beanFactory对象            |
-| BeanNameAware           | setBeanName(String beanName)                                 | 注入当前bean在容器中的beanName                  |
-| ApplicationContextAware | setApplicationContext(ApplicationContext applicationContext) | 注入applicationContext对象                 |
+| BeanFactoryAware        | setBeanFactory(BeanFactory factory)                          | Spring框架回调方法注入beanFactory对象                 |
+| BeanNameAware           | setBeanName(String beanName)                                 | 注入当前bean在容器中的beanName                        |
+| ApplicationContextAware | setApplicationContext(ApplicationContext applicationContext) | 注入applicationContext对象                            |
 
 ---
 

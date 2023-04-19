@@ -1,5 +1,14 @@
 # SpringMVC的全注解开发
 
+- [SpringMVC的全注解开发](#springmvc的全注解开发)
+  - [1. spring-mvc.xml中组件转化为注解形式](#1-spring-mvcxml中组件转化为注解形式)
+  - [2. DispatcherServlet加载核心配置类](#2-dispatcherservlet加载核心配置类)
+  - [3. 消除web.xml](#3-消除webxml)
+    - [3.1 ServletContainerInitializer](#31-servletcontainerinitializer)
+    - [3.2 SpringServletContainerInitializer](#32-springservletcontainerinitializer)
+  - [4. 总结](#4-总结)
+  - [5. 一些原理](#5-一些原理)
+
 为实现SpringMVC的全注解开发，主要有三部分，
 
 - spring-mvc.xml中组件转化为注解形式
