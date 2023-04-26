@@ -140,7 +140,7 @@ public void test03() {
 
 ## 7. 整合第三方框架
 
-以MyyBatis为例，使用注解的方式替换掉原先的xml配置，xml配置如下，
+以MyBatis为例，使用注解的方式替换掉原先的xml配置，xml配置如下，
 
 ```xml
 <!--配置SqlSessionFactoryBean，提供SqlSessionFactory-->
